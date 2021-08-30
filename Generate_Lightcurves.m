@@ -92,56 +92,56 @@ for i = 1:length(t)
                 end
             end
         end   
-        mag(i) = mag(i) + 500*randn;
+        mag(i) = mag(i)';% + 500*randn;
     end
 end
 figure
 lc = (mag+plight)/max(mag+plight);
-
+tlc = t;
 %% Remove some data
 
-num_gaps = ceil(20*rand);
-size_gaps = ceil(40*rand(1,num_gaps));
-start_gaps = floor(length(lc)*rand(1,num_gaps));
-
-for i = 1:num_gaps
-    if start_gaps(i)+size_gaps(i) < length(lc)
-        lc(start_gaps(i):start_gaps(i)+size_gaps(i)) = nan;
-    else
-        lc(start_gaps(i):end) = nan;
-    end
-end
-lc = lc(~isnan(lc));
-tlc = t(~isnan(lc));
-
+% num_gaps = ceil(20*rand);
+% size_gaps = ceil(40*rand(1,num_gaps));
+% start_gaps = floor(length(lc)*rand(1,num_gaps));
+% 
+% for i = 1:num_gaps
+%     if start_gaps(i)+size_gaps(i) < length(lc)
+%         lc(start_gaps(i):start_gaps(i)+size_gaps(i)) = nan;
+%     else
+%         lc(start_gaps(i):end) = nan;
+%     end
+% end
+% lc = lc(~isnan(lc));
+% tlc = t(~isnan(lc));
+% 
 plot(tlc,lc,'bo','markerfacecolor','b','markersize',2)
 
 
 %% Autocorrelate lightcurve
-clear LC
-LC(:,1) = tlc;
-LC(:,2) = lc;
-fs = 1/min(diff(LC(:,1)));
-LCnorm = LC(:,2)-mean(LC(:,2));
-tvec = LC(1,1):1/fs:LC(end,1);
-LCfilled = nan(1,length(tvec));
-for i = 1:length(tvec)
-    idx = find(LC(:,1)==tvec(i));
-    if ~isempty(idx)
-        LCfilled(i) = LCnorm(idx);
-    else
-        LCfilled(i) = 0;
-    end
-end
-
-[autocorr,lags]=xcorr(LCfilled,ceil(max(LC(:,1))/2*fs),'coeff');
-
-[pksh,lcsh] = findpeaks(autocorr,'minpeakdistance',3);
-short = mean(diff(lcsh))/fs;
-
-[pklg,lclg] = findpeaks(autocorr,'minpeakprominence',0.1,'minpeakheight',0.05);
-long = mean(diff(lclg))/fs;
-figure
-plot(lags/fs,autocorr)
-hold on
-pks = plot(lags(lcsh)/fs,pksh,'or',lags(lclg)/fs,pklg+0.05,'vk');
+% clear LC
+% LC(:,1) = tlc;
+% LC(:,2) = lc;
+% fs = 1/min(diff(LC(:,1)));
+% LCnorm = LC(:,2)-mean(LC(:,2));
+% tvec = LC(1,1):1/fs:LC(end,1);
+% LCfilled = nan(1,length(tvec));
+% for i = 1:length(tvec)
+%     idx = find(LC(:,1)==tvec(i));
+%     if ~isempty(idx)
+%         LCfilled(i) = LCnorm(idx);
+%     else
+%         LCfilled(i) = 0;
+%     end
+% end
+% 
+% [autocorr,lags]=xcorr(LCfilled,ceil(max(LC(:,1))/2*fs),'coeff');
+% 
+% [pksh,lcsh] = findpeaks(autocorr,'minpeakdistance',3);
+% short = mean(diff(lcsh))/fs;
+% 
+% [pklg,lclg] = findpeaks(autocorr,'minpeakprominence',0.1,'minpeakheight',0.05);
+% long = mean(diff(lclg))/fs;
+% figure
+% plot(lags/fs,autocorr)
+% hold on
+% pks = plot(lags(lcsh)/fs,pksh,'or',lags(lclg)/fs,pklg+0.05,'vk');
