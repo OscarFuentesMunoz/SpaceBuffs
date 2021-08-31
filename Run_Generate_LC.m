@@ -1,3 +1,5 @@
+
+
 % Initial conditions
 r0 = 860;
 theta0 = 0.01;
@@ -20,9 +22,20 @@ c2 = a2/a_over_c;
 % Impact parameter
 Beta = 2.946;
 
-LC = Generate_LC(tmax,Beta,r0,theta0,phi10,phi20,rd0,phi1d0,phi2d0,a1,c1,a2,c2);
+profile clear
+profile on
+
+for i=1:5
+% LC = Generate_LC(tmax,Beta,r0,theta0,phi10,phi20,rd0,phi1d0,phi2d0,a1,c1,a2,c2);
+% LC = Generate_LC_opt(tmax,Beta,r0,theta0,phi10,phi20,rd0,phi1d0,phi2d0,a1,c1,a2,c2);
+LC = Generate_LC_opt_mex(tmax,Beta,r0,theta0,phi10,phi20,rd0,phi1d0,phi2d0,a1,c1,a2,c2);
+end
+
+profile off
+profile viewer
 
 figure
 plot(LC(:,1),LC(:,2),'bo','markersize',2,'markerfacecolor','b')
-hold on
-plot(LC_real(:,1),LC_real(:,2),'ro','markersize',2,'markerfacecolor','r')
+% hold on
+% plot(LC_real(:,1),LC_real(:,2),'ro','markersize',2,'markerfacecolor','r')
+
