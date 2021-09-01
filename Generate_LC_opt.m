@@ -83,6 +83,9 @@ end
 e_vec = [0,1,0];    % Vector to Earth
 s_vec = [0,1,0];    % Vector to sun
 
+spa = 0 *pi/180;
+e_vec = [sin(spa) cos(spa) 0];
+
 % [bx,by,bz] = ellipsoid(0,0,0,a2,c2,c2);
 [bx,by,bz] = ellipsoid_csml(a2,c2,c2);
 
@@ -100,8 +103,13 @@ sec.faces = f;
 % sec = surf2patch(S);
 % close all
 
-plight = 1.5*8.477442968647369e+05;   % Primary brightness
+% plight = 1.5*8.477442968647369e+05;   % Primary brightness
+% plight = plight*0.2;
+plight = pi*a1*c1*0.55 ;
 
+% D    = 9000;
+% Robs = [0, D, 0];
+% plight = plight/D/D;
 
 %% Pre-compute vertices
 v1m = sec.vertices(sec.faces(:,1),:)';
@@ -111,13 +119,14 @@ v4m = sec.vertices(sec.faces(:,4),:)';
 
 %% quasi-Lightcurves
 mag = zeros(1,length(t));
+vis = zeros(1,length(t));
 for i = 1:length(t)
     
     % System rotation
     M = rotation(theta(i)+phi2(i),3);
     NB = M';
     
-    vis = 0;
+    vis(i) = 0;
     for f = 1:length(sec.faces)
         % Get surface normal
         % v1 = R(:,i) + NB*sec.vertices(sec.faces(f,1),:)';
@@ -141,8 +150,11 @@ for i = 1:length(t)
             vec2 = v4-v1;
         end
 %         surf_norm = crpd(vec1,vec2);
-        surf_norm = cross(vec1,vec2)/norm(cross(vec1,vec2));
+        surfa = norm(cross(vec1,vec2));
+%         surf_norm = cross(vec1,vec2)/norm(cross(vec1,vec2));
+        surf_norm = cross(vec1,vec2)/surfa;
         
+                
         % Make sure this is an outer facing normal
         if dot(surf_norm,v1) < 0
             surf_norm = -surf_norm;
@@ -152,15 +164,43 @@ for i = 1:length(t)
         if dot(surf_norm,s_vec) > 0
             % Check if visible from Earth
             if dot(surf_norm,e_vec) > 0
-                if abs(vc(1))>370 || vc(2) > 0
-                    vis = vis + 1;
-                    mag(i) = mag(i) + dot(surf_norm,e_vec)*norm(vec1)*norm(vec2);
+                
+                lambda = atan2(vc(3),-vc(1));
+                r1 = a1*a1*cos(lambda)^2 + c1*c1*sin(lambda)^2;
+                rc = vc(1)*vc(1) + vc(3)*vc(3);
+                % R2 = norm(vc - Robs)^2 ;
+                
+                if rc > r1 % Projection is outside primary
+                    vis(i) = vis(i) + 1;
+                    mag(i) = mag(i) + dot(surf_norm,e_vec)*surfa;
+                elseif rc < r1 && vc(2) > 0 % Projection inside and in front, subtract
+                    % vis(i) = vis(i) - 1;
+                    % mag(i) = mag(i) - dot(surf_norm,e_vec)*surfa;
+                else % Projection is inside and behind, don't sum
+                    
                 end
+                    
+%                 if abs(vc(1))>370 || vc(2) > 0
+%                     vis = vis + 1;
+%                     % mag(i) = mag(i) + dot(surf_norm,e_vec)*norm(vec1)*norm(vec2);
+%                     mag(i) = mag(i) + dot(surf_norm,e_vec)*surfa;
+% %                 elseif abs(vc(1))<=370 && vc(2) > 0
+% %                     mag(i) = mag(i) - dot(surf_norm,e_vec)*surfa;
+%                 end
             end
         end
-        mag(i) = mag(i)';
+        mag(i) = mag(i) + 40*randn;
+        % mag(i) = mag(i) + 10*randn/D/D;
     end
+%     mag(i) = mag(i) + 300*randn;
 end
 %% Create lightcurve
-lc = (mag+plight)/max(mag+plight);
+ref = max(mag+plight);%+25*300 ;
+lc = (mag+plight)/ref;
 LC = [t,lc'];
+
+figure(11)
+plot(t,vis)
+
+figure(12)
+plot(t,mag)

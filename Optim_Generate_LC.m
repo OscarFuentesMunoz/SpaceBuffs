@@ -90,20 +90,20 @@ x0 = x_guess;
 
 % Lower bounds and Upper bounds
 %    Beta, J2,   r0,   a/c, theta0
-lb = [1;   0;    500;  1.3; 0     ];
-ub = [3;   0.15; 1500; 2.5; 2*pi  ];
+lb = [1;   0;    500;  1.3];% 0     ];
+ub = [3;   0.15; 1500; 2.5];% 2*pi  ];
 
 % Upper bounds
 options = optimoptions('fmincon',...
     'Display','iter',...
-    'Algorithm','interior-point',...
-    'TypicalX',[2; 0.1; 80; 2; pi],...
+    'Algorithm','active-set',...
+    'TypicalX',[2; 0.1; 800; 2],...; pi],...
     'FunctionTolerance', 1e-6,...
     'HessianApproximation','lbfgs');
 
-[x_min,loss_min] = fmincon(@(x) loss_function(LCmeas(:,2),x,tmax), x0, [],[],[],[], lb,ub,[],options);
-error_init = (x_guess - x_true);
-error_min  = (x_min  - x_true);
+[x_min,loss_min] = fmincon(@(x) loss_function(LCmeas(:,2),x,tmax), x0(1:4), [],[],[],[], lb,ub,[],options);
+% error_init = (x_guess - x_true);
+% error_min  = (x_min  - x_true);
 
 % Plot optimized final LC
 [~, LCmin] = loss_function( LCmeas(:,2), x_min, tmax );
@@ -115,8 +115,8 @@ legend('Real',...
     ['Pertu - L=' num2str(err_guess, '%.2e')],...
     ['Optim - L=' num2str(loss_min,  '%.2e')])
 
-Params = {'Beta';'J2';'r_0';'a/c';'theta0'};
-Results = table(Params,x_true,x_guess,x_min);
+Params = {'Beta';'J2';'r_0';'a/c'};%'theta0'};
+Results = table(Params,x_true(1:4),x_guess(1:4),x_min);
 
 
 %% Functions
@@ -131,8 +131,9 @@ function [err, LC] = loss_function( LCgen, x, tmax )
     J2     = x(2);
     r0     = x(3);
     a_ov_c = x(4);
-    theta0 = x(5);
-    
+%     theta0 = x(5);
+    theta0 = 0.5;
+
     % Variables set as constants
     phi10 = 0;
     phi20 = 0;
