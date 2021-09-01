@@ -6,10 +6,10 @@ clear
 
 
 %% Read Lightcurves
-params = csvread('../lightcurves/parameters.csv');
+params = csvread('lightcurves/parameters.csv');
 
 lcv = 3;
-namedir  = '../lightcurves/';
+namedir  = 'lightcurves/';
 namefile = [namedir 'lcvold' num2str(lcv,'%.3d') '.dat'];
 
 LCold = load(namefile);
@@ -27,7 +27,7 @@ a_over_c = params(lcv, 3);
 tmax = LCold(end,1)*60;
 
 % Initial conditions
-r0 = 1200;
+r0 = 830;
 theta0 = 0.05;%0.01;
 phi10  = 0;
 phi20  = 0;
@@ -39,7 +39,7 @@ phi2d0 = 0;
 x_true = [0; J2; r0; a_over_c; theta0];
 
 a1 = 370;
-c1 = 330;
+c1 = a1*(1-J2);
 
 a2 = 130;
 c2 = a2/a_over_c;
