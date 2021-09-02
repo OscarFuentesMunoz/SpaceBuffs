@@ -8,9 +8,10 @@ b = importdata('C:\Users\super\Documents\MATLAB\Andrea Milani\labels_train.dat')
 id = 1; % change id to the corresponding debris training file number
 true_sat = b(id,1);
 true_conj_time = b(id,3);
-true_cram = b(id,2);
+true_cram = b(id,2)*10^-6;
 
-debris = a(2,:);
+meas_id = 1;
+debris = a(meas_id,:);
 cram_l = true_cram-10^-10;
 cram_u = true_cram+10^-10;
 type = 'moid';

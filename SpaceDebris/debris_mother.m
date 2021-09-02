@@ -27,6 +27,7 @@ T = debris(1)*days2sec:-10*days2sec:-7305*days2sec;
 
 % get only the necessary satellite info
 t_id = find(S.sat_time==debris(1));
+sat_pos = S.sat_pos(1:t_id,:,:);
 sat_vel = S.sat_vel(1:t_id,:,:);
 sat_oe = S.sat_oe(1:t_id,:,:);
 
@@ -39,12 +40,14 @@ t_moid_id = zeros(100,1);
 
 for k = 1:ncram
     [~,y] = ode113(@(t,x) Debris_EOM(t,x,cram(k)),T,IC,opts);
-    for ii = 1:100
-        for jj = 1:length(T)
+    for ii = 1:100 % look at each satellite
+        for jj = 1:length(T) % look at each time
             oe_deb = rv2orbel(y(jj,1:3),y(jj,4:6),GMe);
+            % store moid and oe distances
             MOID(jj,ii) = MOID_SDG_win(oe_deb([1 2 4 3 5]), sat_oe(jj,[1 2 4 3 5],ii));
             oe_dist(jj,ii) = norm(oe_deb(1:5)-sat_oe(jj,1:5,ii)');
         end
+        % find time that minimum occurs for each satellite
         if type == 'moid'
             t_moid_id(ii) = find(MOID(:,ii)==min(MOID(:,ii)));
         elseif type == 'oe'
@@ -56,7 +59,9 @@ for k = 1:ncram
     elseif type == 'oe'
         md = min(oe_dist,[],1); % min oe distance for each sat
     end
-
+    
+    % look at the velocity difference between debris and satellites at the
+    % instance in time that the minimum distance occurs
     dv = nan(1,100);
     for ii = 1:100
         if md(ii) < 3 % threshold to investigate satellites further
@@ -64,8 +69,9 @@ for k = 1:ncram
             dv(ii) = sqrt(sum(dv_vec.^2));
         end
     end
-    min_dv(k) = min(dv);
+    % pick satellite that has the minimum dv
     min_dv_id = find(dv==min(dv));
+    min_dv(k) = min(dv);
     min_moid(k) = md(min_dv_id); % could be moid or oe distance
     sat_num(k) = min_dv_id;
     t_min_moid(k) = T(min_dv_id)/days2sec;
