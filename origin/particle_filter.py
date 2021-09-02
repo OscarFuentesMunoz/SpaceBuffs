@@ -17,10 +17,13 @@ class PF_Bootstrap_OE():
     """
     PF_Bootstrap_OE assumes the state is [a,e,i,W,w,E,log10(cram)] and measurement is [a,e,i,W,w,E].
     """
-    def __init__(self, Q=np.zeros((7,7)), R=np.ones((6,6)), N=50) -> None:
+    def __init__(self, Q=np.zeros((7,7)), R0=np.ones((6,6)), R1=np.ones((6,6)), N=50, switch_R_after=2) -> None:
         self.Q = Q
-        self.R = R
+        self.R0 = R0
+        self.R1 = R1
+        self.R = R0
         self.N = N
+        self.switch_R_after = switch_R_after
         self.rng = default_rng(1)
         self.log_cram_range = np.array((-0.5, 1.8))
     
@@ -51,11 +54,14 @@ class PF_Bootstrap_OE():
             start_time = time.time()
 
             if is_parallel:
-                with mp.Pool(processes=mp.cpu_count(), initializer=self._set_local_propagator, initargs=()) as pool:
-                    ret = pool.map(self._propagate_single, 
-                        [(samples[i, j, :], time_obs[i], time_obs[i+1], GMe) for j in range(self.N)]
-                    )
-                    results = [r for r in ret]
+                if i == 0:
+                    pool = mp.Pool(processes=mp.cpu_count(), initializer=self._set_local_propagator, initargs=())
+                ret = pool.map(self._propagate_single, 
+                    [(samples[i, j, :], time_obs[i], time_obs[i+1], GMe) for j in range(self.N)]
+                )
+                results = [r for r in ret]
+                if i == len(time_obs)-2:
+                    pool.close()
                 # Postprocessing
                 for j in range(self.N):
                     if results[j][0] == -1:
@@ -87,6 +93,8 @@ class PF_Bootstrap_OE():
             print("Propagation of the particles is done. Wall-clock time: {} sec".format(end_time - start_time))
 
             # Weight update
+            if i >= self.switch_R_after:
+                self.R = self.R1
             likelihood = self._likelihood(obs_his[i, :], samples[i+1, :, :])
             weight = weight * likelihood
             weight[np.isnan(weight)] = 0.0
@@ -95,7 +103,8 @@ class PF_Bootstrap_OE():
             # Resampling
             weight, states_out = self._resample_move(samples[i+1, :, :], weight, obs_his[i, :])
             samples[i+1, :, :] = states_out
-            print("Cram at iter {0}: {1}".format(i, 10**np.average(states_out[:, 6]) * 1e-6))
+            print("Cram at iter {0}: {1}".format(i, 10**np.average(samples[i+1, :, 6]) * 1e-6))
+            print("Maximum likelihood: {}".format(np.max(self._likelihood(obs_his[i, :], samples[i+1, :, :]))))
         
             # Compute state mean & covariance (diagonal)
             mean, cov_diag = self._calc_mean_cov(samples[i+1, :, :])
@@ -182,12 +191,12 @@ class PF_Bootstrap_OE():
         weights_out = 1/self.N * np.ones(self.N)
 
         # Perform MCMC move
-        c = 0.5
-        m_max = 5
-        cov = np.diag(np.array([20.0, 0.0001, 0.0002, 0.005, 0.005, 0.05, 0.02])**2)
+        c = 1.0
+        m_max = 10
+        cov = np.diag(np.array([20.0, 0.0005, 0.0005, 0.01, 0.01, 0.2, 0.01])**2)
         for m in range(m_max):
             # Compute sample covariance
-            # cov_particle = np.cov(states_out, rowvar=False)
+            # cov = np.cov(states_out, rowvar=False)
             # Add noise to the states
             e_m = self.rng.multivariate_normal(np.zeros(7), cov, (self.N, ))
             x_tilde = states_out + c * e_m
@@ -197,6 +206,8 @@ class PF_Bootstrap_OE():
             u_rands = self.rng.uniform(0.0, 1.0, self.N)
             is_accept = u_rands < ratio
             states_out[is_accept, :] = x_tilde[is_accept, :]
+            acceptance_ratio = sum(is_accept)/len(is_accept)
+
         
         return weights_out, states_out
 
