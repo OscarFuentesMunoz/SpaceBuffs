@@ -34,7 +34,7 @@ def main():
         if len(ephem.time) >= 2:  # then run particle filter
             pf = PF_Bootstrap_OE(Qpf, Rpf0, Rpf1, Npf, switch_R_after=3)
             oe0 = ephem.get_keplerian()[-1]
-            obs_his = np.flip(ephem.get_keplerian()[1:], axis=0)
+            obs_his = np.flip(ephem.get_keplerian(), axis=0)[1:, :]
             time_start = time.time()
             pf_out = pf(time_obs, obs_his, oe0, cov_oe0, is_parallel=True)
             time_end = time.time()
