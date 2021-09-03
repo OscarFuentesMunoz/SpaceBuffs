@@ -45,6 +45,7 @@ def main():
                 writer = csv.writer(f)
                 row = []
                 row.append(id)
+                row.append(time_obs[-1] / 86400.0)
                 row.extend(pf_out[1][-1, :].tolist())
                 row.extend(np.sqrt(pf_out[2][-1, :]).tolist())
                 writer.writerow(row)
