@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # Measurement noise (this is important for the performance of PF!)
     Rpf0 = np.diag([
         50.0**2, 0.001**2, 0.003**2, 0.1**2, 0.1**2, 0.1**2,
-    ])
+    ]) * 10
     # Rpf1 = np.diag([50**2, 0.001**2, 0.003**2, 0.1**2, 0.1**2, 0.1**2])
     Rpf1 = Rpf0
     Npf = 600
