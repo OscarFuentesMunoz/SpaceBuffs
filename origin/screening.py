@@ -36,12 +36,29 @@ class Screen():
             .state(x0)\
             .time(t0)\
             .cram(cram)
-        is_past = self.time <= t0
-        t_grid = self.time[is_past]
+        is_valid = self.time <= t0
+        t_grid = self.time[is_valid]
         ephem_debris = prop(t_grid)
+
+        # Handle a case where the debris collide with the Earth
+        if ephem_debris.get_keplerian().size == 0:  # which means current cram is super infeasible
+            return 1e8, None, None
+            
+        elif ephem_debris.get_cartesian().shape[0] < len(t_grid):  
+            # then redefine the time array and propagate again
+            len_t = ephem_debris.get_cartesian().shape[0]
+            t_min = t_grid[-len_t+1]  # to be safe +1
+            is_valid = is_valid and t_min < self.time
+            t_grid = self.time[is_valid]
+            prop = Propagator()\
+                .state(x0)\
+                .time(t0)\
+                .cram(cram)
+            ephem_debris = prop(t_grid)
+
         
         # Compute weighted RMS
-        kep_target = self.sat_ephemeris[:, is_past, :]
+        kep_target = self.sat_ephemeris[:, is_valid, :]
         kep_debris = ephem_debris.get_keplerian()
         diff_kep = kep_debris - kep_target  # (sat_id, time_index, orbital_elem)
         normalize_diff(diff_kep[:, :, 2])

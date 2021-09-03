@@ -2,6 +2,7 @@ from origin.ephemeris import Ephemeris
 from origin.screening import Screen
 from origin.data_parser import debris_parser
 import numpy as np
+import time
 from bayes_opt import BayesianOptimization
 
 # Load training data
@@ -39,10 +40,13 @@ optimizer = BayesianOptimization(
 )
 
 # Run
+time_start = time.time()
 optimizer.maximize(
     init_points=10,
-    n_iter=20,
+    n_iter=10,
 )
+time_stop = time.time()
+print("Computation finished in {} sec".format(time_stop - time_start))
 
 opt_result = optimizer.max
 state_opt = opt_result["params"]
