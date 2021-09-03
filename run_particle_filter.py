@@ -10,11 +10,11 @@ def main():
     Qpf = np.zeros((7, 7))
     # Measurement noise (this is important for the performance of PF!)
     Rpf0 = np.diag([
-        100.0**2, 0.01**2, 0.01**2, 0.1**2, 0.1**2, 0.5**2,
-    ]) * 1.0
-    Rpf1 = np.diag([50**2, 0.001**2, 0.003**2, 0.1**2, 0.1**2, 0.1**2])
-    Npf = 400
-    pf = PF_Bootstrap_OE(Qpf, Rpf0, Rpf1, Npf, switch_R_after=3)
+        50.0**2, 0.001**2, 0.003**2, 0.1**2, 0.1**2, 0.1**2,
+    ])
+    # Rpf1 = np.diag([50**2, 0.001**2, 0.003**2, 0.1**2, 0.1**2, 0.1**2])
+    Rpf1 = Rpf0
+    Npf = 600
     cov_oe0 = np.diag([
         50.0**2, 0.001**2, 0.003**2, 0.1**2, 0.1**2, 0.1**2,
     ])
@@ -29,17 +29,19 @@ def main():
         debris_data = debris_parser(id, is_training=False)
         ephem = debris_data["ephemeris"]
         time_obs = np.flip(ephem.time)
+        print("Debris ID {}".format(id))
 
         if len(ephem.time) >= 2:  # then run particle filter
+            pf = PF_Bootstrap_OE(Qpf, Rpf0, Rpf1, Npf, switch_R_after=3)
             oe0 = ephem.get_keplerian()[-1]
-            obs_his = ephem.get_keplerian()[1:]
+            obs_his = np.flip(ephem.get_keplerian()[1:], axis=0)
             time_start = time.time()
             pf_out = pf(time_obs, obs_his, oe0, cov_oe0, is_parallel=True)
             time_end = time.time()
             print("Total time running PF for debris id {0}: {1} min".format(id, (time_end - time_start)/60))
 
             # Output in csv
-            with open(os.path.join(logdir, "pf_result.csv"), "W") as f:
+            with open(os.path.join(logdir, "pf_result.csv"), "a") as f:
                 writer = csv.writer(f)
                 row = []
                 row.append(id)

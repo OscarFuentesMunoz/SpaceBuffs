@@ -20,10 +20,11 @@ if __name__ == "__main__":
     Qpf = np.zeros((7, 7))
     # Measurement noise (this is important for the performance of PF!)
     Rpf0 = np.diag([
-        100.0**2, 0.01**2, 0.01**2, 0.1**2, 0.1**2, 0.5**2,
-    ]) * 1.0
-    Rpf1 = np.diag([50**2, 0.001**2, 0.003**2, 0.1**2, 0.1**2, 0.1**2])
-    Npf = 400
+        50.0**2, 0.001**2, 0.003**2, 0.1**2, 0.1**2, 0.1**2,
+    ])
+    # Rpf1 = np.diag([50**2, 0.001**2, 0.003**2, 0.1**2, 0.1**2, 0.1**2])
+    Rpf1 = Rpf0
+    Npf = 600
     pf = PF_Bootstrap_OE(Qpf, Rpf0, Rpf1, Npf, switch_R_after=3)
 
     # Call PF
@@ -32,7 +33,7 @@ if __name__ == "__main__":
     cov_oe0 = np.diag([
         50.0**2, 0.001**2, 0.003**2, 0.1**2, 0.1**2, 0.1**2,
     ])
-    obs_his = ephem.get_keplerian()[1:]
+    obs_his = np.flip(ephem.get_keplerian(), axis=0)[1:, :]
     time_start = time.time()
     pf_out = pf(time_obs, obs_his, oe0, cov_oe0, is_parallel=True)
     time_end = time.time()
@@ -54,7 +55,7 @@ if __name__ == "__main__":
         np.concatenate(
             (
                 ephem_truth.get_keplerian(), 
-                np.log10(cram*1e6) * np.ones(len(t_grid)).reshape((len(t_grid), 1)),
+                (cram*1e6) * np.ones(len(t_grid)).reshape((len(t_grid), 1)),
             ),
             axis=1
         )
@@ -76,8 +77,8 @@ if __name__ == "__main__":
     axs = axs.reshape(9,)
     for i in range(7):
         axs[i].scatter(t_grid / 86400.0, diff[:, i], label="estimation error")
-        axs[i].plot(t_grid / 86400.0, sigmas[:, i] + diff[:, i], linestyle="dashed", color="gray")
-        axs[i].plot(t_grid / 86400.0, -sigmas[:, i] + diff[:, i], linestyle="dashed", color="gray")
+        axs[i].plot(t_grid / 86400.0, sigmas[:, i], linestyle="dashed", color="gray")
+        axs[i].plot(t_grid / 86400.0, -sigmas[:, i], linestyle="dashed", color="gray")
         if i in (0,1,2,3,4,5):
             axs[i].scatter(t_grid / 86400.0, diff_obs[:, i], label="obs error")
         axs[i].grid()
@@ -87,8 +88,10 @@ if __name__ == "__main__":
     axs[3].set_ylabel("W (rad)")
     axs[4].set_ylabel("w (rad)")
     axs[5].set_ylabel("E (rad)")
-    axs[6].set_ylabel("log10[Cr(A/m)]")
+    axs[6].set_ylabel("Cr(A/m)")
     axs[0].legend()
+    axs[7].hist(pf_out[0][-1, :, 6]*1e-6); axs[7].plot((out["cram"], out["cram"]), axs[7].get_ylim())
+    axs[7].set_ylabel("Count"); axs[7].set_xlabel("Cr(A/m)")
     plt.tight_layout()
     plt.show()
 
