@@ -87,10 +87,20 @@ def main(fname_out, fname_est, n_iter0, n_iter1):
             state = info_estimated[ind]["state"]  # cram is in m^2/kg
             sigmas = info_estimated[ind]["sigmas"]
             state_upper = np.zeros(7)
-            state_upper[:6] = state[:6] + sigmas[:6]
+            state_upper[0] = state[0] + sigmas[0]/2
+            state_upper[1] = state[1] + sigmas[1]/2
+            state_upper[2] = state[2] + sigmas[2]*0.75
+            state_upper[3] = state[3] + sigmas[3]/2
+            state_upper[4] = state[4] + sigmas[4]/2
+            state_upper[5] = state[5] + sigmas[5]/4
             state_upper[6] = np.log10(state[6] + sigmas[6])
             state_lower = np.zeros(7)
-            state_lower[:6] = state[:6] - sigmas[:6]
+            state_upper[0] = state[0] - sigmas[0]/2
+            state_upper[1] = state[1] - sigmas[1]/2
+            state_upper[2] = state[2] - sigmas[2]*0.75
+            state_upper[3] = state[3] - sigmas[3]/2
+            state_upper[4] = state[4] - sigmas[4]/2
+            state_upper[5] = state[5] - sigmas[5]/4
             state_lower[6] = np.log10(state[6] - sigmas[6])
             state_probe = np.zeros(7)
             state_probe[:6] = state[:6]
@@ -103,7 +113,7 @@ def main(fname_out, fname_est, n_iter0, n_iter1):
             epoch_s = ephem0.time[0]
             keplerian = ephem0.get_keplerian()[0]
             sigmas_kep = np.array([
-                50.0, 0.001, 0.003, 0.1, 0.1, 0.1, 
+                70.0, 0.001, 0.004, 0.8, 0.1, 0.1, 
             ])
             state_upper = np.zeros(7)
             state_upper[:6] = keplerian + sigmas_kep
