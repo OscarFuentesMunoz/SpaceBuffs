@@ -11,7 +11,7 @@ from origin.screening import Screen
 from origin.data_parser import debris_parser
 
 # Using Bayesian optimization, perform matching and output the solution into csv
-def main(fname_out, fname_est):
+def main(fname_out, fname_est, n_iter0, n_iter1):
 
     # Setup
     time_very_beginning = time.time()
@@ -51,9 +51,10 @@ def main(fname_out, fname_est):
             reader = csv.reader(f)
             for row in reader:
                 id = int(float(row[0]))
-                sat_id = int(float(row[1]))
-                cram = float(row[2])
-                solution.append([id, sat_id, cram])
+                cost = float(row[1])
+                sat_id = int(float(row[2]))
+                cram = float(row[3])
+                solution.append([id, cost, sat_id, cram])
                 id_already_processed.append(id)
         print("The entries for the following debris already exist. The computation will be skipped for those.")
         print(id_already_processed)
@@ -79,10 +80,8 @@ def main(fname_out, fname_est):
         # Define Bayesian optimization spec depending on whether the estimates are available or not. Need (obj_func, state_bounds, n_iter, init_points)
         # Check if PF estimate exists
         if id in ids_estimated:
-            # n_iter = 15
-            # init_points = 5
-            n_iter = 2
             init_points = 0
+            n_iter = n_iter0
             ind = ids_estimated.index(id)
             epoch_s = info_estimated[ind]["epoch"] * 86400.0
             state = info_estimated[ind]["state"]  # cram is in m^2/kg
@@ -93,8 +92,11 @@ def main(fname_out, fname_est):
             state_lower = np.zeros(7)
             state_lower[:6] = state[:6] - sigmas[:6]
             state_lower[6] = np.log10(state[6] - sigmas[6])
+            state_probe = np.zeros(7)
+            state_probe[:6] = state[:6]
+            state_probe[6] = np.log10(state[6])
         else:
-            n_iter = 5
+            n_iter = n_iter1
             init_points = 0
             debris_data = debris_parser(deb_id=id, is_training=False)
             ephem0 = debris_data["ephemeris"]
@@ -109,6 +111,9 @@ def main(fname_out, fname_est):
             state_lower = np.zeros(7)
             state_lower[:6] = keplerian - sigmas_kep
             state_lower[6] = -0.5
+            state_probe = np.zeros(7)
+            state_probe[:6] = keplerian
+            state_probe[6] = np.log10(0.65)
 
         obj_func = lambda a, e, i, W, w, E, log_cram: \
                 -screen.argmin_rms(
@@ -131,6 +136,19 @@ def main(fname_out, fname_est):
             pbounds=state_bounds,
             random_state=1,
         )
+
+        optimizer.probe(
+            params={
+                "a": state_probe[0],
+                "e": state_probe[1],
+                "i": state_probe[2],
+                "W": state_probe[3],
+                "w": state_probe[4],
+                "E": state_probe[5],
+                "log_cram": state_probe[6],
+            },
+            lazy=True,
+        )
         time_start = time.time()
         optimizer.maximize(
             init_points=init_points,
@@ -143,6 +161,7 @@ def main(fname_out, fname_est):
 
         # Get corresponding satellite ID
         opt_result = optimizer.max
+        cost = -opt_result["target"]
         state_opt = opt_result["params"]
         screen_result = screen.argmin_rms(
             epoch_s, 
@@ -161,23 +180,22 @@ def main(fname_out, fname_est):
         print("Matched satellite id: {}".format(screen_result[1]))
         print("Estimated Cr(A/m): {}".format(10**state_opt["log_cram"]*1e-6))
         print("Estimated log10[Cr(A/m)]: {}".format(state_opt["log_cram"]))
+        print("Optimal cost: {}".format(cost))
 
 
         # Save output to csv  (debris_id, parent_id, cram)
         with open(os.path.join(logdir, fname_out), "a") as f:
             writer = csv.writer(f)
-            writer.writerow([id, sat_id, cram])
-        solution.append([id, sat_id, cram])
+            writer.writerow([id, cost, sat_id, cram])
+        solution.append([id, cost, sat_id, cram])
 
     # Save another text file for submission
-    solution_np = np.array(solution)
-    solution_np.sort(axis=0)
-    solution_np[:, 1:].savetxt(
-        os.path.join(
-            logdir, fname_out.strip(".csv") + "_for_submission.txt"
-        ),
-    )
+    solution_np = np.array([np.array(row) for row in solution])
+    solution_np = solution_np[solution_np[:, 0].argsort()]
+    np.savetxt(os.path.join(logdir, fname_out.replace(".csv", "_for_submission.txt")), solution_np[:, 2:])
 
+
+    print("Total cost: {}".format(np.sum(solution_np[:, 1])))
     return solution
 
 
@@ -188,5 +206,10 @@ if __name__ == "__main__":
                         help='Name of the output txt file.')
     parser.add_argument('--name_source', type=str, default="pf_result.csv",
                         help='Name of the csv file in data/results directory that contains state estimates.')
+    parser.add_argument('--n_iter0', type=int, default="12",
+                        help='Number of iteration for debris with at least 2 measurements.')
+    parser.add_argument('--n_iter1', type=int, default="30",
+                        help='Number of iteration for debris with only one measurement.')
+    
     args = parser.parse_args()
-    main(args.name_out, args.name_source)
+    main(args.name_out, args.name_source, args.n_iter0, args.n_iter1)
